@@ -2,10 +2,14 @@
  * usePermissions hook
  * -------------------
  * Returns permission helpers based on current user's role.
- * Extend this when Supabase RBAC is wired.
+ * Uses Supabase-backed roles from AuthContext.
+ *
+ * Future: extend with granular permission checks from
+ *         a permissions table or Supabase RLS policies.
  */
 
-import { useAuth, ROLES } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/AuthContext'
+import { ROLES } from '../services/authService'
 import { useMemo } from 'react'
 
 export function usePermissions() {

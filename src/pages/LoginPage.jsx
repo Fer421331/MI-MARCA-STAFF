@@ -1,20 +1,22 @@
 /**
  * LOGIN PAGE
  * ----------
- * Enterprise login with animated background, form validation,
- * loading state, and error display.
- * Architecture ready for Supabase Auth integration.
+ * Enterprise login with Supabase Auth integration.
+ * Username/password UI — internally maps to Supabase email/password.
+ *
+ * ALL mock/demo credentials and quick-access buttons have been REMOVED.
  */
 
-import { useState, useEffect } from 'react'
-import { useNavigate, Navigate } from 'react-router-dom'
-import { Eye, EyeOff, User2, Lock, AlertCircle, Loader2 } from 'lucide-react'
+import { useState } from 'react'
+import { useNavigate, Navigate, useLocation } from 'react-router-dom'
+import { Eye, EyeOff, User2, Lock, AlertCircle, Loader2, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import MiMarcaLogo from '../components/ui/MiMarcaLogo'
 
 export default function LoginPage() {
   const { user, login } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [username,  setUsername]  = useState('')
   const [password,  setPassword]  = useState('')
@@ -23,8 +25,11 @@ export default function LoginPage() {
   const [error,     setError]     = useState('')
   const [shake,     setShake]     = useState(false)
 
-  /* If already logged in, redirect */
-  if (user) return <Navigate to="/dashboard" replace />
+  /* If already logged in, redirect to intended destination or role default */
+  if (user) {
+    const from = location.state?.from?.pathname || '/dashboard'
+    return <Navigate to={from} replace />
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -37,11 +42,12 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
 
-    const result = await login(username, password)
+    const result = await login(username.trim(), password)
 
     setLoading(false)
     if (result.success) {
-      navigate('/dashboard', { replace: true })
+      // Redirect based on role
+      navigate(result.redirectTo || '/dashboard', { replace: true })
     } else {
       setError(result.error)
       triggerShake()
@@ -152,26 +158,18 @@ export default function LoginPage() {
               >
                 {loading
                   ? <><Loader2 size={16} className="animate-spin" /> Verificando…</>
-                  : 'Iniciar Sesión'
+                  : <><ShieldCheck size={16} /> Iniciar Sesión</>
                 }
               </button>
             </form>
 
-            {/* Demo hint */}
+            {/* Security note */}
             <div className="mt-6 pt-5 border-t border-surface-700">
-              <p className="text-center text-xs text-surface-600 mb-3">Cuentas de demostración</p>
-              <div className="grid grid-cols-2 gap-2">
-                {DEMO_USERS.map(d => (
-                  <button
-                    key={d.username}
-                    type="button"
-                    onClick={() => { setUsername(d.username); setPassword(d.password); setError('') }}
-                    className="text-xs px-3 py-2 rounded-lg bg-surface-800 hover:bg-surface-700 border border-surface-700 hover:border-surface-500 text-surface-400 hover:text-white transition-all text-left truncate"
-                  >
-                    <span className="font-medium text-surface-300">{d.username}</span>
-                    <span className="text-surface-600 ml-1">· {d.label}</span>
-                  </button>
-                ))}
+              <div className="flex items-center gap-2 justify-center text-surface-500">
+                <ShieldCheck size={13} />
+                <p className="text-[11px]">
+                  Conexión segura · Autenticación empresarial
+                </p>
               </div>
             </div>
           </div>
@@ -182,7 +180,7 @@ export default function LoginPage() {
         </p>
       </div>
 
-      {/* Shake keyframes injected inline (Tailwind JIT limitation) */}
+      {/* Shake keyframes */}
       <style>{`
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
@@ -221,10 +219,3 @@ function BackgroundFX() {
     </>
   )
 }
-
-const DEMO_USERS = [
-  { username: 'admin',   password: 'admin123',   label: 'Admin'   },
-  { username: 'ventas',  password: 'ventas123',  label: 'Ventas'  },
-  { username: 'rrhh',    password: 'rrhh123',    label: 'RR.HH.'  },
-  { username: 'soporte', password: 'soporte123', label: 'Soporte' },
-]

@@ -20,6 +20,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@':          path.resolve(__dirname, './src'),
+      '@lib':       path.resolve(__dirname, './src/lib'),
       '@components':path.resolve(__dirname, './src/components'),
       '@pages':     path.resolve(__dirname, './src/pages'),
       '@layouts':   path.resolve(__dirname, './src/layouts'),
@@ -27,6 +28,7 @@ export default defineConfig({
       '@routes':    path.resolve(__dirname, './src/routes'),
       '@hooks':     path.resolve(__dirname, './src/hooks'),
       '@services':  path.resolve(__dirname, './src/services'),
+      '@mock':      path.resolve(__dirname, './src/mock'),
       '@styles':    path.resolve(__dirname, './src/styles'),
     },
   },

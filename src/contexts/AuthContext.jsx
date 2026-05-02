@@ -1,87 +1,105 @@
 /**
  * AUTH CONTEXT
  * -----------
- * Manages authentication state across the application.
- * Ready for Supabase integration — replace the mock login
- * function with supabase.auth.signInWithPassword() when needed.
+ * Manages authentication state using Supabase Auth.
+ * Provides login, logout, session persistence, and role-based access.
+ *
+ * ALL mock/demo authentication has been REMOVED.
+ * The only auth source is Supabase Auth + PostgreSQL.
  */
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import {
+  ROLES,
+  loginWithUsername,
+  fetchCurrentUserProfile,
+  logout as logoutService,
+  getDefaultRoute,
+  onAuthStateChange,
+} from '../services/authService'
 
-// ─── Role definitions ─────────────────────────────────────────────────────────
-export const ROLES = {
-  ADMIN:  'Administrador',
-  SALES:  'Ventas',
-  HR:     'Recursos Humanos',
-  SUPPORT:'Soporte',
-}
+// ─── Re-export ROLES for backward compatibility ──────────────────────────────
+export { ROLES }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 const AuthContext = createContext(null)
-
-// ─── Mock users (replace with Supabase Auth) ─────────────────────────────────
-const MOCK_USERS = [
-  { id: '1', username: 'admin',   password: 'admin123',  name: 'Carlos Méndez',   role: ROLES.ADMIN,   avatar: null },
-  { id: '2', username: 'ventas',  password: 'ventas123', name: 'Sofía Ramírez',   role: ROLES.SALES,   avatar: null },
-  { id: '3', username: 'rrhh',    password: 'rrhh123',   name: 'Andrés Torres',   role: ROLES.HR,      avatar: null },
-  { id: '4', username: 'soporte', password: 'soporte123',name: 'Laura Vásquez',   role: ROLES.SUPPORT, avatar: null },
-]
-
-const SESSION_KEY = 'mi_marca_session'
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 export function AuthProvider({ children }) {
   const [user,    setUser]    = useState(null)
   const [loading, setLoading] = useState(true)   // initial session restore
 
-  /* Restore session from localStorage */
+  /**
+   * Restore session on mount.
+   * Checks if Supabase has a persisted session and rebuilds the user profile.
+   */
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(SESSION_KEY)
-      if (stored) setUser(JSON.parse(stored))
-    } catch { /* ignore */ }
-    setLoading(false)
-  }, [])
+    let cancelled = false
+
+    async function restoreSession() {
+      try {
+        const result = await fetchCurrentUserProfile()
+        if (!cancelled && result.success) {
+          setUser(result.user)
+        }
+      } catch (err) {
+        console.error('Session restore failed:', err)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    restoreSession()
+
+    // Subscribe to auth state changes (token refresh, sign-out from another tab, etc.)
+    const subscription = onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setUser(null)
+      } else if (event === 'TOKEN_REFRESHED' && session) {
+        // Session refreshed, user stays logged in
+      } else if (event === 'SIGNED_IN' && session && !user) {
+        // New sign-in detected (e.g., from another tab)
+        const result = await fetchCurrentUserProfile()
+        if (result.success) setUser(result.user)
+      }
+    })
+
+    return () => {
+      cancelled = true
+      subscription?.unsubscribe()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
    * login()
    * -------
    * @param {string} username
    * @param {string} password
-   * @returns {{ success: boolean, error?: string }}
-   *
-   * TODO: Replace with Supabase:
-   *   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+   * @returns {{ success: boolean, user?: object, error?: string, redirectTo?: string }}
    */
   const login = useCallback(async (username, password) => {
-    await new Promise(r => setTimeout(r, 900)) // simulate network latency
+    const result = await loginWithUsername(username, password)
 
-    const found = MOCK_USERS.find(
-      u => u.username === username.trim() && u.password === password
-    )
-
-    if (!found) return { success: false, error: 'Usuario o contraseña incorrectos.' }
-
-    const session = {
-      id:       found.id,
-      username: found.username,
-      name:     found.name,
-      role:     found.role,
-      avatar:   found.avatar,
+    if (result.success) {
+      setUser(result.user)
+      return {
+        success: true,
+        user: result.user,
+        redirectTo: getDefaultRoute(result.user.role),
+      }
     }
-    setUser(session)
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session))
-    return { success: true }
+
+    return { success: false, error: result.error }
   }, [])
 
   /**
    * logout()
    * --------
-   * TODO: Add supabase.auth.signOut() here.
+   * Signs out from Supabase and clears local state.
    */
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    await logoutService()
     setUser(null)
-    localStorage.removeItem(SESSION_KEY)
   }, [])
 
   /** hasRole() — check if current user has a specific role */

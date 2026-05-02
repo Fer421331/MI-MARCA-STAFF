@@ -8,6 +8,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { UIProvider }  from './contexts/UIContext'
+import { ROLES }       from './services/authService'
 
 import ProtectedRoute    from './routes/ProtectedRoute'
 import AppShell         from './layouts/AppShell'
@@ -36,15 +37,29 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route element={<AppShell />}>
                 <Route index element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard"     element={<DashboardPage />} />
-                <Route path="/reservaciones" element={<ReservacionesPage />} />
-                <Route path="/inventario"    element={<InventarioPage />} />
-                <Route path="/ventas"        element={<VentasPage />} />
-                <Route path="/rrhh"          element={<RRHHPage />} />
-                <Route path="/soporte"       element={<SoportePage />} />
-                <Route path="/reportes"      element={<ReportesPage />} />
-                <Route path="/configuracion" element={<ConfiguracionPage />} />
-                <Route path="*"              element={<NotFoundPage />} />
+                <Route path="/dashboard" element={<DashboardPage />} />
+                
+                {/* Role-protected routes */}
+                <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.SALES]} />}>
+                  <Route path="/reservaciones" element={<ReservacionesPage />} />
+                  <Route path="/inventario"    element={<InventarioPage />} />
+                  <Route path="/ventas"        element={<VentasPage />} />
+                </Route>
+
+                <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.HR]} />}>
+                  <Route path="/rrhh" element={<RRHHPage />} />
+                </Route>
+
+                <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.SUPPORT]} />}>
+                  <Route path="/soporte" element={<SoportePage />} />
+                </Route>
+
+                <Route element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]} />}>
+                  <Route path="/reportes"      element={<ReportesPage />} />
+                  <Route path="/configuracion" element={<ConfiguracionPage />} />
+                </Route>
+
+                <Route path="*" element={<NotFoundPage />} />
               </Route>
             </Route>
 

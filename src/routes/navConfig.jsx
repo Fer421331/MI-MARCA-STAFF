@@ -16,7 +16,7 @@ import {
   BarChart3,
   Settings2,
 } from 'lucide-react'
-import { ROLES } from '../contexts/AuthContext'
+import { ROLES } from '../services/authService'
 
 export const NAV_ITEMS = [
   {

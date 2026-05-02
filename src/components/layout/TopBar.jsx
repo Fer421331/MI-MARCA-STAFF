@@ -51,8 +51,8 @@ export default function TopBar() {
     ? user.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
     : '?'
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     navigate('/login', { replace: true })
   }
 
